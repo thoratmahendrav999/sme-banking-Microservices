@@ -1,0 +1,61 @@
+name: SME Banking CI Pipeline
+
+run-name: SME Banking CI - ${{ github.actor }} - ${{ github.sha }}
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-test-docker:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 1. Checkout source code
+        uses: actions/checkout@v6
+
+      - name: 2. Show project files
+        run: |
+          echo "Repository: $GITHUB_REPOSITORY"
+          echo "Commit: $GITHUB_SHA"
+          find . -maxdepth 3 -type f | sort
+
+      - name: 3. Build application
+        run: |
+          echo "Building SME Banking microservice..."
+          test -f app.txt
+
+      - name: 4. Run tests
+        run: |
+          echo "Running practice tests..."
+          grep -q "SME Banking" app.txt
+          echo "Tests passed."
+
+      - name: 5. Build Docker image
+        run: |
+          docker build -t sme-banking:${GITHUB_SHA} .
+          docker images sme-banking
+
+      - name: 6. Test Docker container
+        run: |
+          docker run --rm sme-banking:${GITHUB_SHA} | tee container-output.txt
+          grep -q "SME Banking Customer Service" container-output.txt
+
+      - name: 7. Validate Kubernetes manifests
+        run: |
+          echo "Kubernetes manifest files:"
+          ls -la k8s/
+          grep -q "kind: Deployment" k8s/customer-deployment.yaml
+          grep -q "kind: Service" k8s/customer-service.yaml
+          echo "Kubernetes manifests passed basic validation."
+
+      - name: 8. Pipeline completed
+        run: echo "SME Banking CI Pipeline completed successfully."
